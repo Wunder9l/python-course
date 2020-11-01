@@ -1,22 +1,56 @@
+from collections import namedtuple, defaultdict
+from functools import reduce
+import json
+
+Document = namedtuple('Document', ['id', 'text'])
+
+
 class InvertedIndex:
     def query(self, words: list) -> list:
         """Return the list of relevant documents for the given query"""
-        pass
+        results = []
+        for word in words:
+            results.append(self.index.get(word, set()))
+        if not results:
+            return list()
+        return list(reduce(lambda x, y: x & y, results[1:], results[0]))
+
+    def __init__(self, documents: [Document]):
+        self.index = defaultdict(set)
+        for doc_id, text in documents:
+            doc_id = int(doc_id)
+            for word in text.split():
+                if not word:
+                    continue
+                self.index[word].add(doc_id)
 
     def dump(self, filepath: str):
-        pass
+        with open(filepath, 'w') as f:
+            to_dump_obj = {k: list(v) for k, v in self.index.items()}
+            f.write(json.dumps(to_dump_obj, indent=2))
 
     @classmethod
     def load(cls, filepath: str):
-        pass
+        with open(filepath, 'r') as f:
+            loaded_obj = json.loads(f.read())
+            index = InvertedIndex([])
+            index.index = defaultdict()
+            for k, v in loaded_obj.items():
+                index.index[k] = set(v)
+            return index
 
 
-def load_documents(filepath: str):
-    pass
+def load_documents(filepath: str) -> [Document]:
+    with open(filepath) as f:
+        documents = []
+        for line in f.readlines():
+            id, _, text = line.partition('\t')
+            documents.append(Document(id, text))
+        return documents
 
 
-def build_inverted_index(documents):
-    pass
+def build_inverted_index(documents: [Document]) -> InvertedIndex:
+    return InvertedIndex(documents)
 
 
 def main():
@@ -29,4 +63,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
